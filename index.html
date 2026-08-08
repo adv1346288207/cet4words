@@ -478,10 +478,9 @@
     .page-mode-row label:hover { border-color: #7986cb; background: #f8f9ff; }
     .page-mode-row input[type="radio"] { display: none; }
     .page-mode-row input[type="radio"]:checked + span {
-      background: #3949ab; color: #fff; padding: 2px 6px; border-radius: 4px;
-    }
-    .page-mode-row label:has(input:checked) {
-      border-color: #3949ab; background: #e8eaf6; box-shadow: 0 0 0 1px #3949ab;
+      background: #3949ab; color: #fff; padding: 4px 10px;
+      border-radius: 6px; font-weight: 700;
+      box-shadow: 0 0 0 2px #3949ab;
     }
     .deep-empty {
       text-align: center; color: #aaa; padding: 60px 20px; font-size: 1rem;
@@ -1280,7 +1279,7 @@ function searchAndJump() {
   } else {
     idx = _allCards.findIndex(c =>
       c.dataset.word.toLowerCase().includes(ql) ||
-      (c.querySelector('.detail')?.textContent || '').toLowerCase().includes(ql) ||
+      ((c.querySelector('.detail') || {}).textContent || '').toLowerCase().includes(ql) ||
       (c.dataset.syn || '').toLowerCase().includes(ql)
     );
   }
@@ -1430,7 +1429,7 @@ function startDictation() {
 
   _dict.words   = _allCards.slice(startIdx, startIdx + count).map(c => ({
     word:   c.dataset.word,
-    detail: c.querySelector('.detail')?.textContent || ''
+    detail: (c.querySelector('.detail') || {}).textContent || ''
   }));
   if (!_dict.words.length) { alert('没有可听写的单词'); return; }
 
