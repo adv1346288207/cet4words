@@ -802,43 +802,6 @@
   </style>
 </head>
 <body>
-<!-- ===== 临时诊断面板（排查手机端问题后删除）===== -->
-<div id="diag" style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#111;color:#0f0;font:12px/1.5 monospace;padding:8px;max-height:45vh;overflow:auto;white-space:pre-wrap;border-bottom:2px solid #0f0"></div>
-<script>
-(function(){
-  var box = document.getElementById('diag');
-  function log(msg, color){
-    if(!box) return;
-    var line = document.createElement('div');
-    if(color) line.style.color = color;
-    line.appendChild(document.createTextNode(msg));
-    box.appendChild(line);
-  }
-  window.__diag = log;
-  log('[诊断] UA: ' + navigator.userAgent, '#9cf');
-  log('[诊断] 页面已加载，等待脚本执行…');
-  // 捕获所有 JS 错误
-  window.onerror = function(m, src, ln, col){
-    log('❌ JS错误: ' + m + '  @' + (src||'').split('/').pop() + ':' + ln + ':' + col, '#f66');
-    return false;
-  };
-  // 检测常见现代语法支持
-  try { eval('var f=(x)=>x;'); log('✅ 支持箭头函数'); }
-  catch(e){ log('❌ 不支持箭头函数 (=>)', '#f66'); }
-  try { eval('var t=`a`;'); log('✅ 支持模板字符串'); }
-  catch(e){ log('❌ 不支持模板字符串 (``)', '#f66'); }
-  try { eval('var o={};var v=o?.x;'); log('✅ 支持可选链'); }
-  catch(e){ log('⚠ 不支持可选链 (?.) — 但代码已改兼容写法', '#fc6'); }
-  // 3 秒后报告词库加载情况
-  setTimeout(function(){
-    log('[诊断] VOCAB_MANIFEST: ' + (window.VOCAB_MANIFEST ? window.VOCAB_MANIFEST.length + ' 个词库' : '未定义！'), window.VOCAB_MANIFEST?'#9cf':'#f66');
-    var wl = document.getElementById('word-list');
-    log('[诊断] word-list 子元素数: ' + (wl ? wl.children.length : 'N/A'), '#9cf');
-    if (typeof WORDS !== 'undefined') log('[诊断] WORDS 数组长度: ' + WORDS.length, '#9cf');
-  }, 3000);
-})();
-</script>
-<!-- ===== 诊断面板结束 ===== -->
 <header>
   <h1 id="app-title">英语词汇记忆</h1>
   <p id="app-sub">加载中…</p>
@@ -1416,8 +1379,10 @@ function speak(word) {
   window.speechSynthesis.speak(utter);
 }
 
-// Voices may load async; cache them early
-window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+// Voices may load async; cache them early (guard for browsers without TTS, e.g. MiuiBrowser)
+if (window.speechSynthesis) {
+  window.speechSynthesis.onvoiceschanged = function() { window.speechSynthesis.getVoices(); };
+}
 
 
 // ========== BACK TO TOP ==========
@@ -1564,7 +1529,7 @@ function toggleDictPause() {
   if (_dict.paused) {
     clearTimeout(_dict.timer);
     _dictGen++;                  // invalidate pending callbacks
-    window.speechSynthesis.cancel();
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
   } else {
     // Resume: restart current word from beginning of its repeats
     _dict.repLeft = dictCfg.repeats;
@@ -1575,7 +1540,7 @@ function toggleDictPause() {
 function dictSkip() {
   clearTimeout(_dict.timer);
   _dictGen++;
-  window.speechSynthesis.cancel();
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
   _dict.repLeft = dictCfg.repeats;
   _dict.idx++;
   if (_dict.idx >= _dict.words.length) { _dictFinish(); return; }
@@ -1591,7 +1556,7 @@ function dictSkip() {
 function stopDictation() {
   clearTimeout(_dict.timer);
   _dictGen++;
-  window.speechSynthesis.cancel();
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
   _dict.paused = false;
   document.getElementById('dict-player').classList.add('hidden');
   if (_dict.idx > 0) _showDictAnswer(_dict.idx);
@@ -1697,6 +1662,7 @@ function _tdShowWord() {
 }
 
 function _tdSpeak(word) {
+  if (!window.speechSynthesis) return;
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(word);
   u.lang = 'en-US'; u.rate = 0.9;
@@ -1754,13 +1720,13 @@ function confirmTypingWord() {
 }
 
 function stopTypingDict() {
-  speechSynthesis.cancel();
+  if (window.speechSynthesis) speechSynthesis.cancel();
   document.getElementById('dict-type-view').classList.add('hidden');
   if (_tdResults.length) _tdShowResult();
 }
 
 function _tdFinish() {
-  speechSynthesis.cancel();
+  if (window.speechSynthesis) speechSynthesis.cancel();
   document.getElementById('dict-type-view').classList.add('hidden');
   _tdShowResult();
 }
