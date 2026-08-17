@@ -782,9 +782,12 @@
 
       /* Floating side-nav → bottom bar, easier for thumbs */
       #float-nav {
-        right: 10px; top: auto; bottom: 76px; transform: none;
+        left: 50%; right: auto; top: auto; bottom: 76px;
+        transform: translateX(-50%); transform-origin: center;
         flex-direction: row; padding: 8px 10px;
+        max-width: calc(100vw - 16px);
       }
+      #float-pos { min-width: 30px; font-size: .68rem; }
 
       /* Modals: use more of the screen */
       .modal-box { padding: 22px 18px; width: 94%; }
@@ -1124,6 +1127,26 @@ function toggleDetail() {
 let _autoReadEnd = -1;
 let _autoReading = false;
 let _autoReadPaused = false;
+function _syncAutoReadBtns() {
+  const stopBtn = document.getElementById('btn-auto-stop');
+  const floatRead = document.getElementById('float-read');
+  if (_autoReading) {
+    stopBtn.textContent = _autoReadPaused ? '▶' : '⏹';
+    if (floatRead) floatRead.textContent = _autoReadPaused ? '▶' : '⏸';
+  } else {
+    if (floatRead) floatRead.textContent = '▶';
+  }
+}
+function _startAutoRead(fromIdx, endIdx) {
+  _autoReading = true;
+  _autoReadPaused = false;
+  _autoReadEnd = endIdx;
+  document.activeElement && document.activeElement.blur();
+  document.getElementById('btn-auto-read').style.display = 'none';
+  document.getElementById('btn-auto-stop').style.display = '';
+  _syncAutoReadBtns();
+  _autoReadStep(fromIdx);
+}
 function startAutoRead() {
   if (!_allCards.length) _allCards = getAllCards();
   const from = parseInt(document.getElementById('ar-from').value, 10) || 1;
@@ -1131,15 +1154,7 @@ function startAutoRead() {
   if (from < 1 || to > _allCards.length || from > to) {
     alert('请输入有效范围：1 – ' + _allCards.length); return;
   }
-  _autoReading = true;
-  _autoReadPaused = false;
-  _autoReadEnd = to - 1;
-  document.activeElement && document.activeElement.blur();
-  document.getElementById('btn-auto-read').style.display = 'none';
-  const stopBtn = document.getElementById('btn-auto-stop');
-  stopBtn.style.display = '';
-  stopBtn.textContent = '⏹';
-  _autoReadStep(from - 1);
+  _startAutoRead(from - 1, to - 1);
 }
 function stopAutoRead() {
   _autoReading = false;
@@ -1147,18 +1162,45 @@ function stopAutoRead() {
   window.speechSynthesis && window.speechSynthesis.cancel();
   document.getElementById('btn-auto-read').style.display = '';
   document.getElementById('btn-auto-stop').style.display = 'none';
+  _syncAutoReadBtns();
 }
 function toggleAutoReadPause() {
   if (!_autoReading) return;
   _autoReadPaused = !_autoReadPaused;
-  const stopBtn = document.getElementById('btn-auto-stop');
   if (_autoReadPaused) {
     window.speechSynthesis && window.speechSynthesis.cancel();
-    stopBtn.textContent = '▶';
   } else {
-    stopBtn.textContent = '⏹';
     _autoReadStep(_curIdx); // re-speak from current word
   }
+  _syncAutoReadBtns();
+}
+// Float-nav button: start auto-read from current word, or pause/resume
+function floatAutoReadToggle() {
+  if (_autoReading) { toggleAutoReadPause(); return; }
+  if (!_allCards.length) _allCards = getAllCards();
+  if (!_allCards.length) return;
+  const from = _curIdx >= 0 ? _curIdx : 0;
+  _startAutoRead(from, _allCards.length - 1);
+}
+// Float-nav button: speak current word
+function floatSpeakCurrent() {
+  if (_curIdx >= 0 && _allCards && _allCards[_curIdx]) {
+    autoSpeak(_allCards[_curIdx].dataset.word);
+  }
+}
+// Float-nav button: toggle star on current word
+function floatToggleStar() {
+  if (currentVocabMeta && currentVocabMeta.isPara) return;
+  if (_curIdx < 0 || !_allCards || !_allCards[_curIdx]) return;
+  const word = _allCards[_curIdx].dataset.word;
+  if (isStarred(word)) unstarWord(word); else starWord(word);
+  _syncFloatStarBtn();
+}
+function _syncFloatStarBtn() {
+  const btn = document.getElementById('float-star');
+  if (!btn) return;
+  if (_curIdx < 0 || !_allCards || !_allCards[_curIdx]) return;
+  btn.textContent = isStarred(_allCards[_curIdx].dataset.word) ? '★' : '☆';
 }
 function _autoReadStep(idx) {
   if (!_autoReading || _autoReadPaused) return; // paused, don't stop — just wait
@@ -1333,6 +1375,8 @@ function updateNavBtns() {
     document.getElementById('float-next').disabled = _curIdx >= total - 1;
     document.getElementById('float-pos').textContent =
       (_curIdx + 1) + '\n/\n' + total;
+    _syncFloatStarBtn();
+    _syncAutoReadBtns();
   }
 }
 
@@ -1812,6 +1856,7 @@ document.addEventListener('keydown', e => {
       } else {
         starWord(word);
       }
+      _syncFloatStarBtn();
     }
   // H — toggle hide/show detail
   } else if (key === 'h' || key === 'H') {
@@ -2349,6 +2394,9 @@ function autoSpeak(word) {
   <button class="float-btn" id="float-prev" onclick="prevCard()" title="上一个">↑</button>
   <span id="float-pos"></span>
   <button class="float-btn" id="float-next" onclick="nextCard()" title="下一个">↓</button>
+  <button class="float-btn" id="float-speak" onclick="floatSpeakCurrent()" title="读当前单词">🔊</button>
+  <button class="float-btn" id="float-star" onclick="floatToggleStar()" title="标记/取消标记">☆</button>
+  <button class="float-btn" id="float-read" onclick="floatAutoReadToggle()" title="开始/继续朗读">▶</button>
 </div>
 
 
