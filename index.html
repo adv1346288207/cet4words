@@ -180,13 +180,6 @@
       min-width: 150px;
     }
     body.hide-detail .word-card:not(.peek) .detail { display: none; }
-    .btn-toggle-detail {
-      padding: 6px 12px; border: 1px solid #c5cae9; border-radius: 6px;
-      background: #fff; cursor: pointer; font-size: .85rem; color: #3949ab;
-      transition: all .15s; white-space: nowrap;
-    }
-    .btn-toggle-detail:hover { background: #e8eaf6; }
-    .btn-toggle-detail.active { background: #3949ab; color: #fff; border-color: #3949ab; }
     .word-syn {
       flex-basis: 100%;
       font-size: 0.82rem;
@@ -277,6 +270,21 @@
       z-index: 500; transition: opacity .2s;
     }
     #float-nav.hidden { display: none; }
+    #float-actions {
+      position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+      display: flex; align-items: center; gap: 8px;
+      background: #fff; border: 1px solid #c5cae9; border-radius: 14px;
+      padding: 8px 10px;
+      box-shadow: 0 4px 20px rgba(63,81,181,.18);
+      z-index: 500; transition: opacity .2s;
+    }
+    #float-actions.hidden { display: none; }
+    #float-actions .float-btn {
+      width: auto; padding: 0 12px; white-space: nowrap;
+    }
+    #float-actions .float-btn.active {
+      background: #3949ab; color: #fff; border-color: #3949ab;
+    }
     .float-btn {
       width: 40px; height: 40px; border-radius: 10px;
       border: 1px solid #c5cae9; background: #f8f9ff;
@@ -761,8 +769,6 @@
         flex: 1 1 46%; text-align: center; padding: 10px 8px;
         font-size: .85rem;
       }
-      .btn-toggle-detail { flex: 1 1 46%; text-align: center; }
-
       /* Search group full width on its own row */
       .search-group { flex: 1 1 100%; }
       .search-group .mode-toggle { flex-shrink: 0; }
@@ -780,14 +786,20 @@
       .detail { min-width: 0; flex-basis: 100%; font-size: .85rem; }
       .phonetic { font-size: .8rem; }
 
-      /* Floating side-nav → bottom bar, easier for thumbs */
+      /* Prev/next nav stays on right edge, vertical (right thumb) */
       #float-nav {
-        left: 50%; right: auto; top: auto; bottom: 76px;
-        transform: translateX(-50%); transform-origin: center;
-        flex-direction: row; padding: 8px 10px;
-        max-width: calc(100vw - 16px);
+        right: 8px; top: 50%; transform: translateY(-50%);
+        flex-direction: column; padding: 8px 6px;
       }
       #float-pos { min-width: 30px; font-size: .68rem; }
+      /* Action bar at bottom center */
+      #float-actions {
+        bottom: 10px; gap: 6px; padding: 7px 8px;
+        max-width: calc(100vw - 16px);
+      }
+      #float-actions .float-btn {
+        padding: 0 10px; font-size: .9rem;
+      }
 
       /* Modals: use more of the screen */
       .modal-box { padding: 22px 18px; width: 94%; }
@@ -830,7 +842,6 @@
            onkeydown="if(event.key==='Enter')searchAndJump()">
     <button class="btn-search" onclick="searchAndJump()">搜索</button>
   </div>
-  <button class="btn-toggle-detail" id="btn-toggle-detail" onclick="toggleDetail()" title="隐藏/显示注释 (快捷键 H)">👁 注释</button>
   <span style="font-size:.82rem;color:#888;white-space:nowrap">｜🎙</span>
   <input type="number" id="ar-from" placeholder="从" min="1" style="width:50px;padding:5px;border:1px solid #c5cae9;border-radius:5px;font-size:.82rem;text-align:center">
   <span style="color:#aaa">—</span>
@@ -1366,9 +1377,11 @@ function updateNavBtns() {
   const total   = _allCards.length;
   const active  = _curIdx >= 0;
   const floatEl = document.getElementById('float-nav');
+  const actEl   = document.getElementById('float-actions');
 
-  // Show / hide floating panel
+  // Show / hide floating panels
   floatEl.classList.toggle('hidden', !active);
+  if (actEl) actEl.classList.toggle('hidden', !active);
 
   if (active) {
     document.getElementById('float-prev').disabled = _curIdx <= 0;
@@ -1917,7 +1930,10 @@ function showView(name) {
     if (el) el.classList.add('hidden');
   });
   // Hide floating nav when leaving main view
-  if (name !== 'main') document.getElementById('float-nav').classList.add('hidden');
+  if (name !== 'main') {
+    document.getElementById('float-nav').classList.add('hidden');
+    document.getElementById('float-actions').classList.add('hidden');
+  }
   if (name === 'main') {
     ['header','.controls','#word-list'].forEach(sel => {
       const el = document.querySelector(sel);
@@ -2389,14 +2405,19 @@ function autoSpeak(word) {
 <!-- ===== Print Area ===== -->
 <div id="print-area"></div>
 
-<!-- Floating prev/next nav -->
+<!-- Floating prev/next nav (right side) -->
 <div id="float-nav" class="hidden">
   <button class="float-btn" id="float-prev" onclick="prevCard()" title="上一个">↑</button>
   <span id="float-pos"></span>
   <button class="float-btn" id="float-next" onclick="nextCard()" title="下一个">↓</button>
+</div>
+
+<!-- Floating action bar (bottom) -->
+<div id="float-actions" class="hidden">
   <button class="float-btn" id="float-speak" onclick="floatSpeakCurrent()" title="读当前单词">🔊</button>
   <button class="float-btn" id="float-star" onclick="floatToggleStar()" title="标记/取消标记">☆</button>
   <button class="float-btn" id="float-read" onclick="floatAutoReadToggle()" title="开始/继续朗读">▶</button>
+  <button class="float-btn" id="btn-toggle-detail" onclick="toggleDetail()" title="隐藏/显示注释">👁 注释</button>
 </div>
 
 
